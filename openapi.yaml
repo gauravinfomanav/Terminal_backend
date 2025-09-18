@@ -1,0 +1,247 @@
+openapi: 3.0.3
+info:
+  title: Stock Watchlist API
+  description: API for managing stock watchlists
+  version: 1.0.0
+  contact:
+    name: Stock Watchlist API
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the API is running
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: API is running
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /watchlists:
+    get:
+      summary: Get all watchlists
+      description: Retrieve all watchlists for the user
+      responses:
+        '200':
+          description: List of watchlists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Watchlist'
+                  count:
+                    type: integer
+                    example: 2
+
+    post:
+      summary: Create a new watchlist
+      description: Create a new watchlist with a name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: My Tech Stocks
+                  description: Name of the watchlist
+      responses:
+        '201':
+          description: Watchlist created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Watchlist created successfully
+                  data:
+                    $ref: '#/components/schemas/Watchlist'
+
+  /watchlists/{watchlistId}/stocks:
+    get:
+      summary: Get stocks in a watchlist
+      description: Retrieve all stocks in a specific watchlist
+      parameters:
+        - name: watchlistId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: watchlist123
+      responses:
+        '200':
+          description: List of stocks in the watchlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Stock'
+                  count:
+                    type: integer
+                    example: 5
+
+    post:
+      summary: Add stock to watchlist
+      description: Add a stock to a specific watchlist
+      parameters:
+        - name: watchlistId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: watchlist123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ticker
+              properties:
+                ticker:
+                  type: string
+                  example: AAPL
+                  description: Stock ticker symbol
+                current_price:
+                  type: number
+                  example: 150.00
+                  description: Current price of the stock
+      responses:
+        '201':
+          description: Stock added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Stock added to watchlist
+                  data:
+                    $ref: '#/components/schemas/Stock'
+
+  /watchlists/{watchlistId}/stocks/{ticker}:
+    delete:
+      summary: Remove stock from watchlist
+      description: Remove a stock from a specific watchlist
+      parameters:
+        - name: watchlistId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: watchlist123
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+      responses:
+        '200':
+          description: Stock removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Stock removed from watchlist
+                  data:
+                    type: object
+                    properties:
+                      ticker:
+                        type: string
+                        example: AAPL
+
+components:
+  schemas:
+    Watchlist:
+      type: object
+      properties:
+        id:
+          type: string
+          example: watchlist123
+        name:
+          type: string
+          example: My Tech Stocks
+        date_created:
+          type: string
+          format: date-time
+          example: 2024-01-17T10:30:00.000Z
+        stock_count:
+          type: integer
+          example: 5
+
+    Stock:
+      type: object
+      properties:
+        id:
+          type: string
+          example: AAPL
+        ticker:
+          type: string
+          example: AAPL
+        current_price:
+          type: number
+          example: 150.00
+        date_added:
+          type: string
+          format: date-time
+          example: 2024-01-17T10:30:00.000Z
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Error description
