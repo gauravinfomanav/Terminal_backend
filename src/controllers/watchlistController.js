@@ -127,17 +127,25 @@ const getWatchlistStocks = async (req, res) => {
   }
 };
 
-// Add stock to a specific watchlist
+// Add stock(s) to a specific watchlist (always accepts array of stocks)
 const addStockToWatchlist = async (req, res) => {
   try {
     const db = getFirestore();
     const { watchlistId } = req.params;
-    const { ticker, current_price } = req.body;
+    const { stocks } = req.body;
     
-    if (!ticker) {
+    // Validate input - must be an array
+    if (!stocks || !Array.isArray(stocks)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Ticker is required'
+        message: 'Request body must contain a "stocks" array'
+      });
+    }
+    
+    if (stocks.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Stocks array cannot be empty'
       });
     }
     
@@ -152,21 +160,49 @@ const addStockToWatchlist = async (req, res) => {
       });
     }
     
-    // Add stock to watchlist
-    const stockRef = db.collection('watchlists').doc(watchlistId).collection('stocks').doc(ticker.toUpperCase());
-    await stockRef.set({
-      ticker: ticker.toUpperCase(),
-      current_price: current_price || 0,
-      date_added: new Date()
-    });
+    const addedStocks = [];
+    const errors = [];
+    
+    // Process each stock
+    for (const stock of stocks) {
+      try {
+        if (!stock.ticker) {
+          errors.push({
+            ticker: stock.ticker || 'unknown',
+            error: 'Ticker is required for each stock'
+          });
+          continue;
+        }
+        
+        const stockRef = db.collection('watchlists').doc(watchlistId).collection('stocks').doc(stock.ticker.toUpperCase());
+        await stockRef.set({
+          ticker: stock.ticker.toUpperCase(),
+          current_price: stock.current_price || 0,
+          date_added: new Date()
+        });
+        
+        addedStocks.push({
+          ticker: stock.ticker.toUpperCase(),
+          current_price: stock.current_price || 0,
+          date_added: new Date()
+        });
+      } catch (error) {
+        errors.push({
+          ticker: stock.ticker || 'unknown',
+          error: error.message
+        });
+      }
+    }
     
     res.status(201).json({
       status: 'success',
-      message: 'Stock added to watchlist',
+      message: 'Watchlist updated successfully',
       data: {
-        ticker: ticker.toUpperCase(),
-        current_price: current_price || 0,
-        date_added: new Date()
+        added_stocks: addedStocks,
+        errors: errors,
+        total_requested: stocks.length,
+        successfully_added: addedStocks.length,
+        failed: errors.length
       }
     });
   } catch (error) {
