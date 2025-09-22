@@ -45,6 +45,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/watchlists', require('./routes/watchlistRoutes'));
+app.use('/user/preferences', require('./routes/preferencesRoutes'));
 
 // 404 handler - catch all routes
 app.use((req, res) => {

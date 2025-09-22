@@ -82,6 +82,11 @@ paths:
                     minimum: 0
                     example: 3
                     description: Total number of watchlists
+                  default_watchlist_id:
+                    type: string
+                    nullable: true
+                    example: "watchlist_1758125631041"
+                    description: ID of the user's default watchlist (null if none set)
         '500':
           description: Internal server error
           content:
@@ -463,6 +468,135 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /user/preferences:
+    get:
+      summary: Get User Preferences
+      description: Retrieve user preferences including default watchlist settings
+      tags:
+        - User Preferences
+      responses:
+        '200':
+          description: User preferences retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/UserPreferences'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /user/preferences/default-watchlist:
+    put:
+      summary: Set Default Watchlist
+      description: Set a specific watchlist as the user's default watchlist
+      tags:
+        - User Preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - watchlist_id
+              properties:
+                watchlist_id:
+                  type: string
+                  example: "watchlist_1758125631041"
+                  description: ID of the watchlist to set as default
+            examples:
+              set_default:
+                summary: Set Default Watchlist
+                value:
+                  watchlist_id: "watchlist_1758125631041"
+      responses:
+        '200':
+          description: Default watchlist set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Default watchlist set successfully"
+                  data:
+                    $ref: '#/components/schemas/UserPreferences'
+        '400':
+          description: Bad request - Missing watchlist ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Watchlist not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Remove Default Watchlist
+      description: Remove the current default watchlist setting (user will need to manually select watchlists)
+      tags:
+        - User Preferences
+      responses:
+        '200':
+          description: Default watchlist removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Default watchlist removed successfully"
+                  data:
+                    type: object
+                    properties:
+                      user_id:
+                        type: string
+                        example: "user123"
+                      default_watchlist_id:
+                        type: string
+                        nullable: true
+                        example: null
+                        description: Now set to null
+                      last_updated:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     Watchlist:
@@ -487,11 +621,16 @@ components:
           minimum: 0
           example: 5
           description: Number of stocks currently in the watchlist
+        is_default:
+          type: boolean
+          example: true
+          description: Whether this watchlist is set as the user's default
       required:
         - id
         - name
         - date_created
         - stock_count
+        - is_default
 
     Stock:
       type: object
@@ -522,6 +661,37 @@ components:
         - ticker
         - current_price
         - date_added
+
+    UserPreferences:
+      type: object
+      description: User preferences including default watchlist settings
+      properties:
+        user_id:
+          type: string
+          example: "user123"
+          description: Unique identifier for the user
+        default_watchlist_id:
+          type: string
+          nullable: true
+          example: "watchlist_1758125631041"
+          description: ID of the user's default watchlist (null if none set)
+        date_set:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-17T10:30:00.000Z"
+          description: Timestamp when the default watchlist was first set
+        last_updated:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-17T10:30:00.000Z"
+          description: Timestamp when preferences were last updated
+      required:
+        - user_id
+        - default_watchlist_id
+        - date_set
+        - last_updated
 
     Error:
       type: object
@@ -557,3 +727,5 @@ tags:
     description: Watchlist management operations
   - name: Stocks
     description: Stock management within watchlists
+  - name: User Preferences
+    description: User preference management including default watchlist settings

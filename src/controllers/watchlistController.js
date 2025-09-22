@@ -4,10 +4,16 @@ const { getFirestore } = require('../config/firebase');
 const getAllWatchlists = async (req, res) => {
   try {
     const db = getFirestore();
+    const userId = 'user123'; // For now, using hardcoded user ID
     
     // Get all watchlists for user123
-    const watchlistsRef = db.collection('watchlists').where('user_id', '==', 'user123');
+    const watchlistsRef = db.collection('watchlists').where('user_id', '==', userId);
     const snapshot = await watchlistsRef.get();
+    
+    // Get user preferences to find default watchlist
+    const preferencesRef = db.collection('user_preferences').doc(userId);
+    const preferencesDoc = await preferencesRef.get();
+    const defaultWatchlistId = preferencesDoc.exists ? preferencesDoc.data().default_watchlist_id : null;
     
     const watchlists = [];
     for (const doc of snapshot.docs) {
@@ -21,14 +27,16 @@ const getAllWatchlists = async (req, res) => {
         id: doc.id,
         name: data.name,
         date_created: data.date_created,
-        stock_count: stocksSnapshot.size
+        stock_count: stocksSnapshot.size,
+        is_default: doc.id === defaultWatchlistId
       });
     }
     
     res.status(200).json({
       status: 'success',
       data: watchlists,
-      count: watchlists.length
+      count: watchlists.length,
+      default_watchlist_id: defaultWatchlistId
     });
   } catch (error) {
     console.error('Error in getAllWatchlists:', error);
