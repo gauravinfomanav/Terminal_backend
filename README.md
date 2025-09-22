@@ -2,6 +2,9 @@
 
 A Node.js REST API for managing stock watchlists in a terminal application.
 
+## 🚀 LIVE API
+**Production URL:** https://terminal.musaffa.us
+
 ## Project Structure
 
 ```
@@ -63,16 +66,30 @@ NodeJS-terminal/
 
 5. The API will be available at `http://localhost:3000`
 
-## API Endpoints (To be implemented)
+## API Endpoints
+
+**Base URL:** https://terminal.musaffa.us
 
 - `GET /health` - Health check endpoint
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/watchlist` - Get user's watchlist
-- `POST /api/watchlist` - Add stock to watchlist
-- `DELETE /api/watchlist/:symbol` - Remove stock from watchlist
-- `GET /api/stocks/:symbol` - Get stock information
-- `GET /api/stocks/:symbol/price` - Get current stock price
+- `GET /watchlists` - Get all watchlists
+- `POST /watchlists` - Create watchlist
+- `GET /watchlists/:id/stocks` - Get stocks in watchlist
+- `POST /watchlists/:id/stocks` - Add stock to watchlist
+- `DELETE /watchlists/:id/stocks/:ticker` - Remove stock from watchlist
+
+### Example API Calls
+```bash
+# Health check
+curl https://terminal.musaffa.us/health
+
+# Get all watchlists
+curl https://terminal.musaffa.us/watchlists
+
+# Create watchlist
+curl -X POST https://terminal.musaffa.us/watchlists \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My Tech Stocks"}'
+```
 
 ## Environment Variables
 

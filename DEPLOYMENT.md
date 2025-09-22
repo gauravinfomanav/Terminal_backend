@@ -1,5 +1,8 @@
 # Deployment Guide
 
+## 🚀 LIVE API
+**Production URL:** https://terminal.musaffa.us
+
 ## Quick Setup
 
 ### 1. Install Dependencies
@@ -28,7 +31,7 @@ Edit `.env` file:
 ```bash
 NODE_ENV=production
 PORT=3000
-CORS_ORIGIN=https://your-frontend-domain.com
+CORS_ORIGIN=https://terminal.musaffa.us
 ```
 
 ### 5. Start Server
@@ -42,12 +45,28 @@ npm start
 
 ## API Endpoints
 
+**Base URL:** https://terminal.musaffa.us
+
 - `GET /health` - Health check
 - `GET /watchlists` - Get all watchlists
 - `POST /watchlists` - Create watchlist
 - `GET /watchlists/:id/stocks` - Get stocks in watchlist
 - `POST /watchlists/:id/stocks` - Add stock to watchlist
 - `DELETE /watchlists/:id/stocks/:ticker` - Remove stock from watchlist
+
+### Example API Calls
+```bash
+# Health check
+curl https://terminal.musaffa.us/health
+
+# Get all watchlists
+curl https://terminal.musaffa.us/watchlists
+
+# Create watchlist
+curl -X POST https://terminal.musaffa.us/watchlists \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My Tech Stocks"}'
+```
 
 ## Production Deployment
 
