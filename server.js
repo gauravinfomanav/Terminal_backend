@@ -1,10 +1,14 @@
 const app = require('./src/app');
 const connectDB = require('./src/config/database');
+const priceMonitoringService = require('./src/services/priceMonitoringService');
 
 const PORT = process.env.PORT || 3000;
 
 // Connect to Firebase Firestore
 connectDB();
+
+// Start price monitoring service
+priceMonitoringService.start();
 
 // Start server
 const server = app.listen(PORT, () => {

@@ -18,8 +18,8 @@ app.use(cors({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 1500 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 10000
 });
 app.use(limiter);
 
@@ -46,6 +46,11 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/watchlists', require('./routes/watchlistRoutes'));
 app.use('/user/preferences', require('./routes/preferencesRoutes'));
+app.use('/fcm', require('./routes/fcmRoutes'));
+app.use('/targets', require('./routes/priceTargetRoutes'));
+app.use('/notifications', require('./routes/notificationRoutes'));
+app.use('/research-notes', require('./routes/researchNotesRoutes'));
+app.use('/websocket', require('./routes/webSocketRoutes'));
 
 // 404 handler - catch all routes
 app.use((req, res) => {

@@ -2,15 +2,16 @@ openapi: 3.0.3
 info:
   title: Stock Watchlist API
   description: |
-    A comprehensive REST API for managing stock watchlists in a terminal application.
+    A comprehensive REST API for managing stock watchlists with real-time price notifications in a terminal application.
     
     This API allows users to:
     - Create and manage multiple watchlists
     - Add and remove stocks from watchlists
     - Track stock information including ticker symbols and prices
-    - Monitor watchlist performance
+    - Set price targets and receive FCM notifications
+    - Monitor watchlist performance with real-time WebSocket price feeds
     
-    The API uses Firebase Firestore for data persistence and provides real-time updates.
+    The API uses Firebase Firestore for data persistence, WebSocket for real-time price updates, and FCM for push notifications.
   version: 1.0.0
   contact:
     name: Stock Watchlist API Support
@@ -597,6 +598,1095 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /fcm/register-token:
+    post:
+      summary: Register FCM Token
+      description: Register a Firebase Cloud Messaging token for push notifications
+      tags:
+        - FCM Tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  example: "fcm_device_token_here"
+                  description: FCM device token from client
+                device_type:
+                  type: string
+                  enum: [android, ios, web]
+                  example: "android"
+                  description: Type of device
+                device_name:
+                  type: string
+                  example: "My Phone"
+                  description: Human-readable device name
+            examples:
+              android_device:
+                summary: Android Device
+                value:
+                  token: "fcm_android_token_123"
+                  device_type: "android"
+                  device_name: "Samsung Galaxy S21"
+              ios_device:
+                summary: iOS Device
+                value:
+                  token: "fcm_ios_token_456"
+                  device_type: "ios"
+                  device_name: "iPhone 13 Pro"
+      responses:
+        '201':
+          description: FCM token registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "FCM token registered successfully"
+                  data:
+                    type: object
+                    properties:
+                      token_id:
+                        type: string
+                        example: "uuid-here"
+                      device_type:
+                        type: string
+                        example: "android"
+                      device_name:
+                        type: string
+                        example: "My Phone"
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+        '400':
+          description: Bad request - Missing FCM token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /fcm/tokens:
+    get:
+      summary: Get User FCM Tokens
+      description: Retrieve all registered FCM tokens for the user
+      tags:
+        - FCM Tokens
+      responses:
+        '200':
+          description: FCM tokens retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        token_id:
+                          type: string
+                          example: "uuid-here"
+                        device_type:
+                          type: string
+                          example: "android"
+                        device_name:
+                          type: string
+                          example: "My Phone"
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                        last_used:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                  count:
+                    type: integer
+                    example: 2
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /fcm/tokens/{tokenId}:
+    put:
+      summary: Update FCM Token
+      description: Update FCM token information
+      tags:
+        - FCM Tokens
+      parameters:
+        - name: tokenId
+          in: path
+          required: true
+          description: Unique identifier of the FCM token
+          schema:
+            type: string
+          example: "uuid-here"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_name:
+                  type: string
+                  example: "Updated Device Name"
+                is_active:
+                  type: boolean
+                  example: true
+            examples:
+              update_device_name:
+                summary: Update Device Name
+                value:
+                  device_name: "My Updated Phone"
+              deactivate_token:
+                summary: Deactivate Token
+                value:
+                  is_active: false
+      responses:
+        '200':
+          description: FCM token updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "FCM token updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      token_id:
+                        type: string
+                        example: "uuid-here"
+                      last_updated:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+        '404':
+          description: FCM token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Remove FCM Token
+      description: Remove (deactivate) an FCM token
+      tags:
+        - FCM Tokens
+      parameters:
+        - name: tokenId
+          in: path
+          required: true
+          description: Unique identifier of the FCM token
+          schema:
+            type: string
+          example: "uuid-here"
+      responses:
+        '200':
+          description: FCM token removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "FCM token removed successfully"
+                  data:
+                    type: object
+                    properties:
+                      token_id:
+                        type: string
+                        example: "uuid-here"
+        '404':
+          description: FCM token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /targets:
+    post:
+      summary: Create Price Target
+      description: Create a new price target for stock price notifications
+      tags:
+        - Price Targets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ticker
+                - target_price
+                - alert_type
+                - watchlist_id
+              properties:
+                ticker:
+                  type: string
+                  pattern: '^[A-Z]{1,5}$'
+                  example: "AAPL"
+                  description: Stock ticker symbol
+                target_price:
+                  type: number
+                  format: float
+                  minimum: 0
+                  example: 150.00
+                  description: Target price to monitor
+                alert_type:
+                  type: string
+                  enum: [above, below]
+                  example: "above"
+                  description: Alert when price goes above or below target
+                watchlist_id:
+                  type: string
+                  example: "watchlist_1758125631041"
+                  description: ID of the watchlist this target belongs to
+                is_active:
+                  type: boolean
+                  example: true
+                  description: Whether the target is active
+            examples:
+              above_target:
+                summary: Price Above Target
+                value:
+                  ticker: "AAPL"
+                  target_price: 150.00
+                  alert_type: "above"
+                  watchlist_id: "watchlist_1758125631041"
+                  is_active: true
+              below_target:
+                summary: Price Below Target
+                value:
+                  ticker: "TSLA"
+                  target_price: 200.00
+                  alert_type: "below"
+                  watchlist_id: "watchlist_1758125631042"
+                  is_active: true
+      responses:
+        '201':
+          description: Price target created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Price target created successfully"
+                  data:
+                    type: object
+                    properties:
+                      target_id:
+                        type: string
+                        example: "uuid-here"
+                      ticker:
+                        type: string
+                        example: "AAPL"
+                      target_price:
+                        type: number
+                        example: 150.00
+                      alert_type:
+                        type: string
+                        example: "above"
+                      is_active:
+                        type: boolean
+                        example: true
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+        '400':
+          description: Bad request - Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - Active target already exists for this ticker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Get All Price Targets
+      description: Retrieve all active price targets for the user
+      tags:
+        - Price Targets
+      responses:
+        '200':
+          description: Price targets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        target_id:
+                          type: string
+                          example: "uuid-here"
+                        ticker:
+                          type: string
+                          example: "AAPL"
+                        target_price:
+                          type: number
+                          example: 150.00
+                        alert_type:
+                          type: string
+                          example: "above"
+                        is_active:
+                          type: boolean
+                          example: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                        last_updated:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                        triggered:
+                          type: boolean
+                          example: false
+                        triggered_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          example: null
+                        current_price:
+                          type: number
+                          example: 145.25
+                  count:
+                    type: integer
+                    example: 3
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /targets/watchlist/{watchlistId}:
+    get:
+      summary: Get Price Targets for Watchlist
+      description: Retrieve all price targets for a specific watchlist
+      tags:
+        - Price Targets
+      parameters:
+        - name: watchlistId
+          in: path
+          required: true
+          description: Unique identifier of the watchlist
+          schema:
+            type: string
+          example: "watchlist_1758125631041"
+      responses:
+        '200':
+          description: Price targets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        target_id:
+                          type: string
+                          example: "uuid-here"
+                        ticker:
+                          type: string
+                          example: "AAPL"
+                        target_price:
+                          type: number
+                          example: 150.00
+                        alert_type:
+                          type: string
+                          example: "above"
+                        watchlist_id:
+                          type: string
+                          example: "watchlist_1758125631041"
+                        watchlist_name:
+                          type: string
+                          example: "My Tech Portfolio"
+                        is_active:
+                          type: boolean
+                          example: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                        last_updated:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                        triggered:
+                          type: boolean
+                          example: false
+                        triggered_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          example: null
+                        current_price:
+                          type: number
+                          example: 145.25
+                  count:
+                    type: integer
+                    example: 2
+                  watchlist:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "watchlist_1758125631041"
+                      name:
+                        type: string
+                        example: "My Tech Portfolio"
+        '404':
+          description: Watchlist not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /targets/{id}:
+    get:
+      summary: Get Price Target by ID
+      description: Retrieve a specific price target by its ID
+      tags:
+        - Price Targets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the price target
+          schema:
+            type: string
+          example: "uuid-here"
+      responses:
+        '200':
+          description: Price target retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      target_id:
+                        type: string
+                        example: "uuid-here"
+                      ticker:
+                        type: string
+                        example: "AAPL"
+                      target_price:
+                        type: number
+                        example: 150.00
+                      alert_type:
+                        type: string
+                        example: "above"
+                      is_active:
+                        type: boolean
+                        example: true
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+                      last_updated:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+                      triggered:
+                        type: boolean
+                        example: false
+                      triggered_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        example: null
+                      current_price:
+                        type: number
+                        example: 145.25
+        '404':
+          description: Price target not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update Price Target
+      description: Update an existing price target
+      tags:
+        - Price Targets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the price target
+          schema:
+            type: string
+          example: "uuid-here"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_price:
+                  type: number
+                  format: float
+                  minimum: 0
+                  example: 155.00
+                alert_type:
+                  type: string
+                  enum: [above, below]
+                  example: "below"
+                is_active:
+                  type: boolean
+                  example: false
+            examples:
+              update_price:
+                summary: Update Target Price
+                value:
+                  target_price: 155.00
+              change_alert_type:
+                summary: Change Alert Type
+                value:
+                  alert_type: "below"
+              deactivate_target:
+                summary: Deactivate Target
+                value:
+                  is_active: false
+      responses:
+        '200':
+          description: Price target updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Price target updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      target_id:
+                        type: string
+                        example: "uuid-here"
+                      last_updated:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+        '400':
+          description: Bad request - Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Price target not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete Price Target
+      description: Delete (deactivate) a price target
+      tags:
+        - Price Targets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the price target
+          schema:
+            type: string
+          example: "uuid-here"
+      responses:
+        '200':
+          description: Price target deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Price target deleted successfully"
+                  data:
+                    type: object
+                    properties:
+                      target_id:
+                        type: string
+                        example: "uuid-here"
+        '404':
+          description: Price target not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications:
+    get:
+      summary: Get Notification History
+      description: Retrieve notification history for the user
+      tags:
+        - Notifications
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of notifications to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          example: 50
+      responses:
+        '200':
+          description: Notification history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "notification-id"
+                        target_id:
+                          type: string
+                          example: "target-uuid"
+                        ticker:
+                          type: string
+                          example: "AAPL"
+                        target_price:
+                          type: number
+                          example: 150.00
+                        current_price:
+                          type: number
+                          example: 150.25
+                        alert_type:
+                          type: string
+                          example: "above"
+                        sent_at:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                        status:
+                          type: string
+                          example: "sent"
+                  count:
+                    type: integer
+                    example: 5
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/{id}:
+    get:
+      summary: Get Notification by ID
+      description: Retrieve a specific notification by its ID
+      tags:
+        - Notifications
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the notification
+          schema:
+            type: string
+          example: "notification-id"
+      responses:
+        '200':
+          description: Notification retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "notification-id"
+                      target_id:
+                        type: string
+                        example: "target-uuid"
+                      ticker:
+                        type: string
+                        example: "AAPL"
+                      target_price:
+                        type: number
+                        example: 150.00
+                      current_price:
+                        type: number
+                        example: 150.25
+                      alert_type:
+                        type: string
+                        example: "above"
+                      sent_at:
+                        type: string
+                        format: date-time
+                        example: "2024-01-17T10:30:00.000Z"
+                      status:
+                        type: string
+                        example: "sent"
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /websocket/status:
+    get:
+      summary: Get WebSocket Connection Status
+      description: Check the status of the WebSocket price feed connection
+      tags:
+        - WebSocket
+      responses:
+        '200':
+          description: WebSocket status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      isConnected:
+                        type: boolean
+                        example: true
+                        description: Whether WebSocket is connected
+                      subscribedTickers:
+                        type: array
+                        items:
+                          type: string
+                        example: ["AAPL", "MSFT", "GOOG"]
+                        description: List of subscribed tickers
+                      cachedPrices:
+                        type: integer
+                        example: 3
+                        description: Number of cached prices
+                      reconnectAttempts:
+                        type: integer
+                        example: 0
+                        description: Number of reconnection attempts
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /websocket/prices:
+    get:
+      summary: Get Current Cached Prices
+      description: Retrieve all current cached prices from WebSocket feed
+      tags:
+        - WebSocket
+      responses:
+        '200':
+          description: Cached prices retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        symbol:
+                          type: string
+                          example: "AAPL"
+                        price:
+                          type: number
+                          example: 150.25
+                        volume:
+                          type: integer
+                          example: 1234567
+                        timestamp:
+                          type: integer
+                          example: 1703123456
+                        date_time_utc:
+                          type: string
+                          format: date-time
+                          example: "2023-12-21T10:30:56Z"
+                        last_updated:
+                          type: string
+                          format: date-time
+                          example: "2024-01-17T10:30:00.000Z"
+                    example:
+                      AAPL:
+                        symbol: "AAPL"
+                        price: 150.25
+                        volume: 1234567
+                        timestamp: 1703123456
+                        date_time_utc: "2023-12-21T10:30:56Z"
+                        last_updated: "2024-01-17T10:30:00.000Z"
+                  count:
+                    type: integer
+                    example: 3
+                    description: Number of cached prices
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /research-notes/{ticker}:
+    get:
+      summary: Get Research Notes for Ticker
+      description: Retrieve all research notes the user saved for a stock ticker
+      tags:
+        - Research Notes
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          description: Stock ticker symbol
+          schema:
+            type: string
+            pattern: '^[A-Z]{1,5}$'
+          example: "AAPL"
+      responses:
+        '200':
+          description: Research notes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ResearchNoteItem'
+                  ticker:
+                    type: string
+                    example: "AAPL"
+                  count:
+                    type: integer
+                    example: 2
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Add Research Note for Ticker
+      description: Add a research note entry for a specific stock ticker
+      tags:
+        - Research Notes
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          description: Stock ticker symbol
+          schema:
+            type: string
+            pattern: '^[A-Z]{1,5}$'
+          example: "AAPL"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - note
+              properties:
+                note:
+                  type: string
+                  minLength: 1
+                  example: "Q3 earnings beat; watching gross margin expansion and AI services."
+      responses:
+        '201':
+          description: Research note added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Research note added successfully"
+                  data:
+                    $ref: '#/components/schemas/ResearchNoteItem'
+        '400':
+          description: Bad request - Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     Watchlist:
@@ -710,6 +1800,270 @@ components:
         - status
         - message
 
+    FCMToken:
+      type: object
+      description: Firebase Cloud Messaging token for push notifications
+      properties:
+        token_id:
+          type: string
+          example: "uuid-here"
+          description: Unique identifier for the FCM token
+        token:
+          type: string
+          example: "fcm_device_token_here"
+          description: FCM device token
+        device_type:
+          type: string
+          enum: [android, ios, web]
+          example: "android"
+          description: Type of device
+        device_name:
+          type: string
+          example: "My Phone"
+          description: Human-readable device name
+        is_active:
+          type: boolean
+          example: true
+          description: Whether the token is active
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00.000Z"
+          description: When the token was registered
+        last_used:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00.000Z"
+          description: When the token was last used
+      required:
+        - token_id
+        - token
+        - device_type
+        - device_name
+        - is_active
+        - created_at
+
+    PriceTarget:
+      type: object
+      description: A price target for stock price notifications
+      properties:
+        target_id:
+          type: string
+          example: "uuid-here"
+          description: Unique identifier for the price target
+        ticker:
+          type: string
+          pattern: '^[A-Z]{1,5}$'
+          example: "AAPL"
+          description: Stock ticker symbol
+        target_price:
+          type: number
+          format: float
+          minimum: 0
+          example: 150.00
+          description: Target price to monitor
+        alert_type:
+          type: string
+          enum: [above, below]
+          example: "above"
+          description: Alert when price goes above or below target
+        watchlist_id:
+          type: string
+          example: "watchlist_1758125631041"
+          description: ID of the watchlist this target belongs to
+        watchlist_name:
+          type: string
+          example: "My Tech Portfolio"
+          description: Name of the watchlist this target belongs to
+        is_active:
+          type: boolean
+          example: true
+          description: Whether the target is active
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00.000Z"
+          description: When the target was created
+        last_updated:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00.000Z"
+          description: When the target was last updated
+        triggered:
+          type: boolean
+          example: false
+          description: Whether the target has been triggered
+        triggered_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+          description: When the target was triggered
+        current_price:
+          type: number
+          format: float
+          example: 145.25
+          description: Current market price of the stock
+      required:
+        - target_id
+        - ticker
+        - target_price
+        - alert_type
+        - watchlist_id
+        - watchlist_name
+        - is_active
+        - created_at
+        - triggered
+
+    Notification:
+      type: object
+      description: A notification sent when a price target is hit
+      properties:
+        id:
+          type: string
+          example: "notification-id"
+          description: Unique identifier for the notification
+        target_id:
+          type: string
+          example: "target-uuid"
+          description: ID of the price target that was triggered
+        ticker:
+          type: string
+          example: "AAPL"
+          description: Stock ticker symbol
+        target_price:
+          type: number
+          format: float
+          example: 150.00
+          description: The target price that was set
+        current_price:
+          type: number
+          format: float
+          example: 150.25
+          description: The current price when target was hit
+        alert_type:
+          type: string
+          enum: [above, below]
+          example: "above"
+          description: Type of alert that was triggered
+        watchlist_id:
+          type: string
+          example: "watchlist_1758125631041"
+          description: ID of the watchlist the target belonged to
+        watchlist_name:
+          type: string
+          example: "My Tech Portfolio"
+          description: Name of the watchlist the target belonged to
+        sent_at:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00.000Z"
+          description: When the notification was sent
+        status:
+          type: string
+          example: "sent"
+          description: Status of the notification
+      required:
+        - id
+        - target_id
+        - ticker
+        - target_price
+        - current_price
+        - alert_type
+        - watchlist_id
+        - watchlist_name
+        - sent_at
+        - status
+
+    WebSocketStatus:
+      type: object
+      description: WebSocket connection status information
+      properties:
+        isConnected:
+          type: boolean
+          example: true
+          description: Whether WebSocket is connected
+        subscribedTickers:
+          type: array
+          items:
+            type: string
+          example: ["AAPL", "MSFT", "GOOG"]
+          description: List of subscribed tickers
+        cachedPrices:
+          type: integer
+          example: 3
+          description: Number of cached prices
+        reconnectAttempts:
+          type: integer
+          example: 0
+          description: Number of reconnection attempts
+      required:
+        - isConnected
+        - subscribedTickers
+        - cachedPrices
+        - reconnectAttempts
+
+    PriceData:
+      type: object
+      description: Real-time price data from WebSocket feed
+      properties:
+        symbol:
+          type: string
+          example: "AAPL"
+          description: Stock ticker symbol
+        price:
+          type: number
+          format: float
+          example: 150.25
+          description: Current market price
+        volume:
+          type: integer
+          example: 1234567
+          description: Trading volume
+        timestamp:
+          type: integer
+          example: 1703123456
+          description: Unix timestamp
+        date_time_utc:
+          type: string
+          format: date-time
+          example: "2023-12-21T10:30:56Z"
+          description: UTC datetime string
+        last_updated:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00.000Z"
+          description: When the price was last updated
+      required:
+        - symbol
+        - price
+        - volume
+        - timestamp
+        - date_time_utc
+
+    ResearchNoteItem:
+      type: object
+      description: A single research note entry for a stock ticker
+      properties:
+        id:
+          type: string
+          example: "uuid-here"
+          description: Unique identifier for the note
+        ticker:
+          type: string
+          example: "AAPL"
+          description: Stock ticker symbol
+        text:
+          type: string
+          example: "Q3 earnings beat; watching gross margin expansion and AI services."
+          description: Note text content
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-17T10:30:00.000Z"
+          description: When the note was created
+
+
   securitySchemes:
     bearerAuth:
       type: http
@@ -729,3 +2083,11 @@ tags:
     description: Stock management within watchlists
   - name: User Preferences
     description: User preference management including default watchlist settings
+  - name: FCM Tokens
+    description: Firebase Cloud Messaging token management for push notifications
+  - name: Price Targets
+    description: Price target management for stock price notifications
+  - name: Notifications
+    description: Notification history and management
+  - name: WebSocket
+    description: WebSocket connection status and real-time price data
