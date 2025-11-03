@@ -1687,6 +1687,246 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/screener/strategies:
+    post:
+      summary: Create Screener Strategy
+      description: Save a filter strategy configuration for the stock screener
+      tags:
+        - Screener Strategies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - filters
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  example: "High Growth Tech Stocks"
+                  description: Strategy name (required, max 100 characters)
+                description:
+                  type: string
+                  maxLength: 500
+                  example: "Technology sector stocks with high revenue growth and low P/E ratios"
+                  description: Strategy description (optional, max 500 characters)
+                filters:
+                  type: object
+                  description: Dynamic filters object containing filter IDs and values
+                  additionalProperties: true
+                  example:
+                    sector: "Technology"
+                    marketCap: "10b_50b"
+                    revenueGrowth: "over_20"
+                    peTTM: "under_15"
+                    country: "US"
+                    exchange: ["NYSE", "NASDAQ"]
+                sortBy:
+                  type: string
+                  example: "usdMarketCap:desc"
+                  description: Sort preference (e.g., 'usdMarketCap:desc', 'peTTM:asc')
+                isDefault:
+                  type: boolean
+                  example: false
+                  description: Mark as default strategy (default: false)
+            examples:
+              high_growth_tech:
+                summary: High Growth Tech Strategy
+                value:
+                  name: "High Growth Tech Stocks"
+                  description: "Technology sector stocks with high revenue growth and low P/E ratios"
+                  filters:
+                    sector: "Technology"
+                    marketCap: "10b_50b"
+                    revenueGrowth: "over_20"
+                    peTTM: "under_15"
+                    country: "US"
+                    exchange: ["NYSE", "NASDAQ"]
+                  sortBy: "usdMarketCap:desc"
+                  isDefault: false
+      responses:
+        '201':
+          description: Strategy created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Strategy saved successfully"
+                  data:
+                    $ref: '#/components/schemas/ScreenerStrategy'
+        '400':
+          description: Bad request - Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Get All Screener Strategies
+      description: Retrieve all saved screener strategies for the user
+      tags:
+        - Screener Strategies
+      parameters:
+        - name: includeDefault
+          in: query
+          description: Include default strategies (default: true)
+          schema:
+            type: boolean
+          example: true
+        - name: limit
+          in: query
+          description: Max results per page (default: 50, max: 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          example: 50
+        - name: offset
+          in: query
+          description: Pagination offset (default: 0)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+      responses:
+        '200':
+          description: Strategies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScreenerStrategyListItem'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 5
+                      limit:
+                        type: integer
+                        example: 50
+                      offset:
+                        type: integer
+                        example: 0
+                      hasMore:
+                        type: boolean
+                        example: false
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/screener/strategies/{strategyId}:
+    get:
+      summary: Get Screener Strategy by ID
+      description: Retrieve details of a specific strategy to apply it
+      tags:
+        - Screener Strategies
+      parameters:
+        - name: strategyId
+          in: path
+          required: true
+          description: Unique identifier of the strategy
+          schema:
+            type: string
+          example: "strategy_abc123"
+      responses:
+        '200':
+          description: Strategy retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/ScreenerStrategy'
+        '404':
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete Screener Strategy
+      description: Delete a saved screener strategy
+      tags:
+        - Screener Strategies
+      parameters:
+        - name: strategyId
+          in: path
+          required: true
+          description: Unique identifier of the strategy
+          schema:
+            type: string
+          example: "strategy_abc123"
+      responses:
+        '200':
+          description: Strategy deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Strategy deleted successfully"
+        '404':
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     Watchlist:
@@ -2063,6 +2303,124 @@ components:
           example: "2024-01-17T10:30:00.000Z"
           description: When the note was created
 
+    ScreenerStrategy:
+      type: object
+      description: A complete screener strategy with all details
+      properties:
+        id:
+          type: string
+          example: "strategy_abc123"
+          description: Unique identifier for the strategy
+        userId:
+          type: string
+          example: "user_123"
+          description: User ID who owns the strategy
+        name:
+          type: string
+          example: "High Growth Tech Stocks"
+          description: Strategy name
+        description:
+          type: string
+          nullable: true
+          example: "Technology sector stocks with high revenue growth and low P/E ratios"
+          description: Strategy description
+        filters:
+          type: object
+          description: Dynamic filters object with filter IDs as keys and values
+          additionalProperties: true
+          example:
+            sector: "Technology"
+            marketCap: "10b_50b"
+            revenueGrowth: "over_20"
+            peTTM: "under_15"
+            country: "US"
+            exchange: ["NYSE", "NASDAQ"]
+        sortBy:
+          type: string
+          nullable: true
+          example: "usdMarketCap:desc"
+          description: Sort preference
+        isDefault:
+          type: boolean
+          example: false
+          description: Whether this is the default strategy
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00.000Z"
+          description: When the strategy was created
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00.000Z"
+          description: When the strategy was last updated
+      required:
+        - id
+        - userId
+        - name
+        - filters
+        - isDefault
+        - createdAt
+        - updatedAt
+
+    ScreenerStrategyListItem:
+      type: object
+      description: Screener strategy item in list view
+      properties:
+        id:
+          type: string
+          example: "strategy_abc123"
+          description: Unique identifier for the strategy
+        name:
+          type: string
+          example: "High Growth Tech Stocks"
+          description: Strategy name
+        description:
+          type: string
+          nullable: true
+          example: "Technology sector stocks with high revenue growth and low P/E ratios"
+          description: Strategy description
+        filters:
+          type: object
+          description: Dynamic filters object
+          additionalProperties: true
+          example:
+            sector: "Technology"
+            marketCap: "10b_50b"
+            revenueGrowth: "over_20"
+            peTTM: "under_15"
+        sortBy:
+          type: string
+          nullable: true
+          example: "usdMarketCap:desc"
+          description: Sort preference
+        isDefault:
+          type: boolean
+          example: false
+          description: Whether this is the default strategy
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00.000Z"
+          description: When the strategy was created
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00.000Z"
+          description: When the strategy was last updated
+        resultsCount:
+          type: integer
+          nullable: true
+          example: 125
+          description: Cached count of results from last search (optional)
+      required:
+        - id
+        - name
+        - filters
+        - isDefault
+        - createdAt
+        - updatedAt
+
 
   securitySchemes:
     bearerAuth:
@@ -2091,3 +2449,7 @@ tags:
     description: Notification history and management
   - name: WebSocket
     description: WebSocket connection status and real-time price data
+  - name: Research Notes
+    description: Research notes management for stock tickers
+  - name: Screener Strategies
+    description: Stock screener filter strategy management
