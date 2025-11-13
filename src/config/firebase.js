@@ -17,7 +17,6 @@ const initializeFirebase = () => {
     }
     
     db = admin.firestore();
-    console.log(`Firebase Firestore initialized for project: ${admin.app().options.projectId}`);
     return db;
   } catch (error) {
     console.error('Firebase initialization error:', error.message);

@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const logger = require('../utils/logger');
 
 class WebSocketPriceService {
   constructor() {
@@ -15,19 +16,15 @@ class WebSocketPriceService {
   // Connect to WebSocket
   connect() {
     try {
-      console.log('Connecting to WebSocket price feed...');
-      
       this.ws = new WebSocket(this.wsUrl);
       
       this.ws.on('open', () => {
-        console.log('✅ WebSocket connected to price feed');
         this.isConnected = true;
         this.reconnectAttempts = 0;
         
         // Send a heartbeat or keep-alive message if needed
         // Some WebSocket servers require immediate subscription
         if (this.subscribedTickers.size === 0) {
-          console.log('No tickers subscribed yet, sending empty subscription to keep connection alive');
           // Send empty array to keep connection alive
           this.ws.send(JSON.stringify([]));
         } else {
@@ -41,12 +38,12 @@ class WebSocketPriceService {
           const message = JSON.parse(data.toString());
           this.handlePriceUpdate(message);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          logger.error('Error parsing WebSocket message:', error);
         }
       });
       
       this.ws.on('close', (code, reason) => {
-        console.log(`WebSocket connection closed. Code: ${code}, Reason: ${reason}`);
+        logger.warn(`WebSocket connection closed. Code: ${code}, Reason: ${reason}`);
         this.isConnected = false;
         
         // Only attempt reconnection if it wasn't a clean close
@@ -56,18 +53,17 @@ class WebSocketPriceService {
       });
       
       this.ws.on('error', (error) => {
-        console.error('WebSocket error:', error.message);
+        logger.error('WebSocket error:', error.message);
         this.isConnected = false;
       });
       
       // Add ping/pong handling for keep-alive
       this.ws.on('ping', () => {
-        console.log('Received ping from server');
         this.ws.pong();
       });
       
     } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
+      logger.error('Error connecting to WebSocket:', error);
       this.handleReconnect();
     }
   }
@@ -76,35 +72,30 @@ class WebSocketPriceService {
   handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectInterval/1000} seconds...`);
+      logger.warn(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectInterval/1000} seconds...`);
       
       setTimeout(() => {
         this.connect();
       }, this.reconnectInterval);
     } else {
-      console.error('Max reconnection attempts reached. WebSocket connection failed.');
+      logger.error('Max reconnection attempts reached. WebSocket connection failed.');
     }
   }
 
   // Subscribe to tickers
   subscribeToTickers(tickers) {
     if (!this.isConnected || !this.ws) {
-      console.log('WebSocket not connected. Will subscribe when connected.');
       tickers.forEach(ticker => this.subscribedTickers.add(ticker));
       return;
     }
 
-    console.log(`Subscribing to tickers: ${tickers.join(', ')}`);
-    
     try {
       this.ws.send(JSON.stringify(tickers));
       
       // Add to subscribed tickers set
       tickers.forEach(ticker => this.subscribedTickers.add(ticker));
-      
-      console.log(`✅ Subscribed to ${tickers.length} tickers`);
     } catch (error) {
-      console.error('Error subscribing to tickers:', error);
+      logger.error('Error subscribing to tickers:', error);
     }
   }
 
@@ -114,7 +105,6 @@ class WebSocketPriceService {
     
     // Note: The WebSocket API doesn't seem to support unsubscription
     // We'll just remove from our local tracking
-    console.log(`Unsubscribed from tickers: ${tickers.join(', ')}`);
   }
 
   // Handle incoming price updates
@@ -134,8 +124,6 @@ class WebSocketPriceService {
           last_updated: new Date()
         });
       });
-      
-      console.log(`📈 Price update received for ${Object.keys(priceData).join(', ')}`);
     }
   }
 
@@ -172,18 +160,15 @@ class WebSocketPriceService {
       this.ws = null;
     }
     this.isConnected = false;
-    console.log('WebSocket disconnected');
   }
 
   // Start the service
   start() {
-    console.log('Starting WebSocket price service...');
     this.connect();
   }
 
   // Stop the service
   stop() {
-    console.log('Stopping WebSocket price service...');
     this.disconnect();
   }
 }

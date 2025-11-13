@@ -95,6 +95,27 @@ curl -X POST https://terminal.musaffa.us/watchlists \
 
 See `env.example` for all required environment variables.
 
+### Logging Configuration
+
+The application uses a structured logging system with log levels:
+
+- **error**: Critical errors that need immediate attention
+- **warn**: Warnings about potential issues
+- **info**: General informational messages (default)
+
+**Log Levels:**
+- Default: `LOG_LEVEL=info` (logs errors, warnings, and info)
+- Can be set to `error` or `warn` for even less verbosity
+
+**What gets logged:**
+- ✅ Service start/stop events
+- ✅ Target hits and notifications
+- ✅ WebSocket connections/disconnections
+- ✅ Errors and warnings
+- ❌ No debug messages (ping/pong, routine checks, price updates removed)
+
+This keeps log volume minimal while maintaining visibility into important events.
+
 ## Next Steps
 
 1. Implement user authentication

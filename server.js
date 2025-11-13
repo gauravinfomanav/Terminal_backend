@@ -12,12 +12,15 @@ priceMonitoringService.start();
 
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+  // Server started silently
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
+  // Only log critical errors
+  if (process.env.LOG_LEVEL !== 'silent') {
+    console.error(`Unhandled Rejection: ${err.message}`);
+  }
   server.close(() => {
     process.exit(1);
   });
@@ -25,7 +28,10 @@ process.on('unhandledRejection', (err, promise) => {
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.log(`Error: ${err.message}`);
+  // Only log critical errors
+  if (process.env.LOG_LEVEL !== 'silent') {
+    console.error(`Uncaught Exception: ${err.message}`);
+  }
   process.exit(1);
 });
 

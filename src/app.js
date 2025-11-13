@@ -23,11 +23,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Logging middleware
-if (process.env.NODE_ENV === 'development') {
+// Logging middleware - disabled in production for zero logs
+if (process.env.NODE_ENV === 'development' && process.env.ENABLE_HTTP_LOGS !== 'false') {
   app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
 }
 
 // Body parsing middleware

@@ -2,6 +2,7 @@ const { getFirestore } = require('../config/firebase');
 const { admin } = require('../config/firebase');
 const webSocketPriceService = require('./webSocketPriceService');
 const cron = require('node-cron');
+const logger = require('../utils/logger');
 
 class PriceMonitoringService {
   constructor() {
@@ -14,23 +15,18 @@ class PriceMonitoringService {
   // Start the price monitoring service
   start() {
     if (this.isRunning) {
-      console.log('Price monitoring service is already running');
       return;
     }
 
-    console.log('Starting price monitoring service...');
     this.isRunning = true;
 
     // Run every 5 minutes to check targets
     cron.schedule('*/5 * * * *', async () => {
-      console.log('Running price target check at:', new Date().toISOString());
       await this.checkAllPriceTargets();
     });
 
     // Check if there are existing targets first
     this.checkAndStartWebSocket();
-
-    console.log('Price monitoring service started - checking every 5 minutes');
   }
 
   // Check if we need to start WebSocket and subscribe to existing targets
@@ -43,12 +39,10 @@ class PriceMonitoringService {
       const snapshot = await targetsRef.where('is_active', '==', true).where('triggered', '==', false).get();
       
       if (snapshot.empty) {
-        console.log('No active price targets found. WebSocket will start when first target is created.');
         return;
       }
 
       // Start WebSocket and subscribe to existing targets
-      console.log(`Found ${snapshot.size} existing targets. Starting WebSocket...`);
       this.webSocketService.start();
       
       // Wait a bit for WebSocket to connect, then subscribe
@@ -57,7 +51,7 @@ class PriceMonitoringService {
       }, 3000); // Wait 3 seconds for WebSocket to connect
       
     } catch (error) {
-      console.error('Error checking existing targets:', error);
+      logger.error('Error checking existing targets:', error);
     }
   }
 
@@ -65,7 +59,6 @@ class PriceMonitoringService {
   stop() {
     this.isRunning = false;
     this.webSocketService.stop();
-    console.log('Price monitoring service stopped');
   }
 
   // Subscribe to existing price targets
@@ -78,7 +71,6 @@ class PriceMonitoringService {
       const snapshot = await targetsRef.where('is_active', '==', true).where('triggered', '==', false).get();
       
       if (snapshot.empty) {
-        console.log('No active price targets to subscribe to');
         return;
       }
 
@@ -89,10 +81,9 @@ class PriceMonitoringService {
         this.monitoredTickers.add(ticker);
       });
 
-      console.log(`Subscribing to ${tickers.length} tickers for existing targets: ${tickers.join(', ')}`);
       this.webSocketService.subscribeToTickers(tickers);
     } catch (error) {
-      console.error('Error subscribing to existing targets:', error);
+      logger.error('Error subscribing to existing targets:', error);
     }
   }
 
@@ -112,18 +103,15 @@ class PriceMonitoringService {
       const snapshot = await targetsRef.where('is_active', '==', true).where('triggered', '==', false).get();
       
       if (snapshot.empty) {
-        console.log('No active price targets to check');
         return;
       }
-
-      console.log(`Checking ${snapshot.size} active price targets`);
 
       for (const doc of snapshot.docs) {
         const target = doc.data();
         await this.checkPriceTarget(target);
       }
     } catch (error) {
-      console.error('Error in checkAllPriceTargets:', error);
+      logger.error('Error in checkAllPriceTargets:', error);
     }
   }
 
@@ -133,11 +121,8 @@ class PriceMonitoringService {
       const currentPrice = this.getCurrentStockPrice(target.ticker);
       
       if (currentPrice === null) {
-        console.log(`No price data available for ${target.ticker}`);
         return;
       }
-
-      console.log(`Checking ${target.ticker}: Current: $${currentPrice}, Target: $${target.target_price} (${target.alert_type})`);
 
       // Update current price in database
       await this.updateTargetCurrentPrice(target.target_id, currentPrice);
@@ -146,11 +131,10 @@ class PriceMonitoringService {
       const isTargetHit = this.isTargetHit(currentPrice, target.target_price, target.alert_type);
       
       if (isTargetHit) {
-        console.log(`🎯 TARGET HIT! ${target.ticker} reached $${currentPrice} (Target: $${target.target_price})`);
         await this.handleTargetHit(target, currentPrice);
       }
     } catch (error) {
-      console.error(`Error checking target for ${target.ticker}:`, error);
+      logger.error(`Error checking target for ${target.ticker}:`, error);
     }
   }
 
@@ -174,7 +158,7 @@ class PriceMonitoringService {
         last_price_check: new Date()
       });
     } catch (error) {
-      console.error('Error updating target current price:', error);
+      logger.error('Error updating target current price:', error);
     }
   }
 
@@ -197,9 +181,8 @@ class PriceMonitoringService {
       // Log notification in history
       await this.logNotification(target, currentPrice);
 
-      console.log(`✅ Notification sent for ${target.ticker} target hit in watchlist: ${target.watchlist_name}`);
     } catch (error) {
-      console.error('Error handling target hit:', error);
+      logger.error('Error handling target hit:', error);
     }
   }
 
@@ -211,7 +194,7 @@ class PriceMonitoringService {
       const snapshot = await tokensRef.where('is_active', '==', true).get();
       
       if (snapshot.empty) {
-        console.log('No active FCM tokens found for user');
+        logger.warn('No active FCM tokens found for user');
         return;
       }
 
@@ -239,6 +222,11 @@ class PriceMonitoringService {
       };
 
       // Send notification to each token individually
+      // NOTE: APNs endpoint (production vs sandbox) is automatically handled by FCM
+      // based on Firebase Console configuration. Ensure Firebase Console has:
+      // 1. Production APNs Authentication Key uploaded (not sandbox)
+      // 2. Correct iOS bundle ID configured
+      // 3. Production environment selected for production apps
       let successCount = 0;
       let failureCount = 0;
       
@@ -247,23 +235,25 @@ class PriceMonitoringService {
           const singleMessage = {
             notification: message.notification,
             data: message.data,
-            token: tokens[i]
+            token: tokens[i],
+            // APNs configuration is handled automatically by FCM based on Firebase Console settings
+            // For production apps, ensure Firebase Console uses production APNs endpoint
+            // (api.push.apple.com) - this is configured in Firebase Console, not in code
           };
           
           await admin.messaging().send(singleMessage);
           successCount++;
         } catch (error) {
-          console.log(`Failed to send to token ${i + 1}: ${error.message}`);
+          logger.warn(`Failed to send to token ${i + 1}: ${error.message}`);
           failureCount++;
         }
       }
       
-      console.log(`FCM notification sent to ${successCount} devices`);
       if (failureCount > 0) {
-        console.log(`Failed to send to ${failureCount} devices`);
+        logger.warn(`Failed to send to ${failureCount} devices`);
       }
     } catch (error) {
-      console.error('Error sending FCM notification:', error);
+      logger.error('Error sending FCM notification:', error);
     }
   }
 
@@ -285,18 +275,15 @@ class PriceMonitoringService {
         status: 'sent'
       });
     } catch (error) {
-      console.error('Error logging notification:', error);
+      logger.error('Error logging notification:', error);
     }
   }
 
   // Subscribe to new ticker when target is created
   async subscribeToNewTicker(ticker) {
     if (!this.monitoredTickers.has(ticker)) {
-      console.log(`Subscribing to new ticker: ${ticker}`);
-      
       // Start WebSocket if not already running
       if (!this.webSocketService.isConnected) {
-        console.log('Starting WebSocket for new ticker subscription...');
         this.webSocketService.start();
         
         // Wait for connection before subscribing
