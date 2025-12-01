@@ -50,6 +50,8 @@ app.use('/notifications', require('./routes/notificationRoutes'));
 app.use('/research-notes', require('./routes/researchNotesRoutes'));
 app.use('/websocket', require('./routes/webSocketRoutes'));
 app.use('/api/screener/strategies', require('./routes/screenerStrategiesRoutes'));
+app.use('/trading-ideas', require('./routes/tradingIdeasRoutes'));
+app.use('/api/portfolios', require('./routes/portfolioRoutes'));
 
 // 404 handler - catch all routes
 app.use((req, res) => {

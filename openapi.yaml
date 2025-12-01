@@ -1927,6 +1927,809 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /trading-ideas:
+    get:
+      summary: Get All Trading Ideas
+      description: Retrieve all trading ideas including analyst names, titles, companies, tickers, prices, and supporting report links.
+      tags:
+        - Trading Ideas
+      responses:
+        '200':
+          description: Trading ideas retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TradingIdea'
+                  count:
+                    type: integer
+                    example: 5
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create Trading Idea
+      description: Create a new trading idea with analyst details and supporting PDF links.
+      tags:
+        - Trading Ideas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - title
+                - company
+                - action
+                - conviction
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                  description: Analyst name
+                title:
+                  type: string
+                  example: "Reliance Industries - Strong Buy Opportunity"
+                  description: Idea title/headline
+                company:
+                  type: string
+                  example: "Reliance Industries"
+                  description: Company name
+                ticker:
+                  type: string
+                  example: "RELIANCE.NS"
+                  description: Stock ticker symbol
+                r_org:
+                  type: string
+                  example: "Alpha Research"
+                  description: Research institute/organization providing the idea
+                action:
+                  type: string
+                  enum: [Buy, Sell, Hold, Reduce, Add]
+                  example: "Buy"
+                  description: Analyst recommendation
+                target:
+                  type: number
+                  format: float
+                  example: 2500.00
+                  description: Target price in INR
+                current:
+                  type: number
+                  format: float
+                  example: 2300.00
+                  description: Current price when the idea was created
+                supporting_reports:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  example:
+                    - "https://example.com/report-one.pdf"
+                    - "https://example.com/report-two.pdf"
+                  description: Array of PDF links supporting the idea
+                conviction:
+                  type: number
+                  format: float
+                  minimum: 1
+                  maximum: 5
+                  example: 3.5
+                  description: Analyst conviction score (1-5, decimals allowed)
+            examples:
+              idea_example:
+                summary: Trading Idea Example
+                value:
+                  name: "John Doe"
+                  title: "Reliance Industries - Strong Buy Opportunity"
+                  company: "Reliance Industries"
+                  ticker: "RELIANCE.NS"
+                  r_org: "Alpha Research"
+                  action: "Buy"
+                  target: 2500.00
+                  current: 2300.00
+                  supporting_reports:
+                    - "https://example.com/report-one.pdf"
+                    - "https://example.com/report-two.pdf"
+                  conviction: 4.5
+      responses:
+        '201':
+          description: Trading idea created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                    example: success
+                  message:
+                    type: string
+                    example: "Trading idea created successfully"
+                  data:
+                    $ref: '#/components/schemas/TradingIdea'
+        '400':
+          description: Bad request - Missing or invalid fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/portfolios:
+    post:
+      summary: Save Portfolio
+      description: Creates a new active portfolio with holdings and calculated fields
+      tags:
+        - Portfolios
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortfolioInput'
+            examples:
+              portfolio_example:
+                summary: AI Acceleration Basket
+                value:
+                  portfolio_name: "AI Acceleration Basket"
+                  client_name: "John Doe"
+                  client_age: 35
+                  risk_profile: "Moderate"
+                  strategy_type: "Growth"
+                  benchmark: "NIFTY 50"
+                  objective: "Capital appreciation through tech disruption"
+                  initial_capital: 100000.0
+                  investment_horizon: "5 Years"
+                  expected_rate_of_return: 12.5
+                  commentary: "Supporting commentary and rationale..."
+                  holdings:
+                    - ticker: "AAPL"
+                      company: "Apple Inc"
+                      exchange: "NASDAQ"
+                      sector: "Technology"
+                      current_price: 160.50
+                      target_price: 190.00
+                      quantity: 250
+                      allocation_percent: 40.0
+                      allocation_amount: 40125.0
+                      market_cap: 2500000000000.0
+                      pe_ratio: 28.5
+                      notes: "Strong fundamentals"
+                  status: "active"
+      responses:
+        '200':
+          description: Portfolio saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  message:
+                    type: string
+                    example: "Portfolio saved successfully"
+                  data:
+                    $ref: '#/components/schemas/Portfolio'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Get All Portfolios
+      description: Retrieves all portfolios with optional filtering by status, pagination, and search
+      tags:
+        - Portfolios
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, portfolio_name, initial_capital]
+            default: updated_at
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by portfolio name or client name
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, draft, archived]
+          description: Filter by portfolio status (optional - if not provided, returns all portfolios)
+      responses:
+        '200':
+          description: Portfolios retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      portfolios:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PortfolioSummary'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/portfolios/{portfolio_id}:
+    get:
+      summary: Get Portfolio by ID
+      description: Retrieves full details of a specific portfolio
+      tags:
+        - Portfolios
+      parameters:
+        - name: portfolio_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the portfolio
+      responses:
+        '200':
+          description: Portfolio retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/Portfolio'
+        '404':
+          description: Portfolio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update Portfolio
+      description: Updates an existing portfolio or draft
+      tags:
+        - Portfolios
+      parameters:
+        - name: portfolio_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the portfolio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortfolioInput'
+      responses:
+        '200':
+          description: Portfolio updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  message:
+                    type: string
+                    example: "Portfolio updated successfully"
+                  data:
+                    $ref: '#/components/schemas/Portfolio'
+        '404':
+          description: Portfolio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete Portfolio
+      description: Permanently deletes a portfolio (drafts only, or with confirmation)
+      tags:
+        - Portfolios
+      parameters:
+        - name: portfolio_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the portfolio
+      responses:
+        '200':
+          description: Portfolio deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  message:
+                    type: string
+                    example: "Portfolio deleted successfully"
+        '403':
+          description: Cannot delete active portfolio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Portfolio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/portfolios/drafts:
+    post:
+      summary: Save Draft Portfolio
+      description: Creates a new draft portfolio (incomplete portfolio)
+      tags:
+        - Portfolios
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                portfolio_name:
+                  type: string
+                  example: "AI Acceleration Basket (Draft)"
+                client_name:
+                  type: string
+                  nullable: true
+                  example: "John Doe"
+                initial_capital:
+                  type: number
+                  nullable: true
+                  example: 100000.0
+                holdings:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Holding'
+                  default: []
+      responses:
+        '200':
+          description: Draft saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  message:
+                    type: string
+                    example: "Draft saved successfully"
+                  data:
+                    $ref: '#/components/schemas/Portfolio'
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Get Draft Portfolios
+      description: Retrieves all draft portfolios with pagination and filtering
+      tags:
+        - Portfolios
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, portfolio_name, initial_capital]
+            default: updated_at
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by portfolio name or client name
+      responses:
+        '200':
+          description: Draft portfolios retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      portfolios:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PortfolioSummary'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/portfolios/active:
+    get:
+      summary: Get Active Portfolios
+      description: Retrieves all active portfolios with pagination and filtering
+      tags:
+        - Portfolios
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, portfolio_name, initial_capital]
+            default: updated_at
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by portfolio name or client name
+      responses:
+        '200':
+          description: Active portfolios retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      portfolios:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PortfolioSummary'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/portfolios/archived:
+    get:
+      summary: Get Archived Portfolios
+      description: Retrieves all archived portfolios with pagination and filtering
+      tags:
+        - Portfolios
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, portfolio_name, initial_capital]
+            default: updated_at
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by portfolio name or client name
+      responses:
+        '200':
+          description: Archived portfolios retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      portfolios:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PortfolioSummary'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/portfolios/{portfolio_id}/archive:
+    patch:
+      summary: Archive Portfolio
+      description: Moves a portfolio to archived status
+      tags:
+        - Portfolios
+      parameters:
+        - name: portfolio_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the portfolio
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                archive_reason:
+                  type: string
+                  example: "Portfolio completed"
+      responses:
+        '200':
+          description: Portfolio archived successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  message:
+                    type: string
+                    example: "Portfolio archived successfully"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        enum: [archived]
+                      archived_at:
+                        type: string
+                        format: date-time
+        '404':
+          description: Portfolio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/portfolios/{portfolio_id}/unarchive:
+    patch:
+      summary: Unarchive Portfolio
+      description: Moves an archived portfolio back to active
+      tags:
+        - Portfolios
+      parameters:
+        - name: portfolio_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the portfolio
+      responses:
+        '200':
+          description: Portfolio unarchived successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  message:
+                    type: string
+                    example: "Portfolio unarchived successfully"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        enum: [active]
+        '400':
+          description: Portfolio is not archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Portfolio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     Watchlist:
@@ -2022,6 +2825,437 @@ components:
         - default_watchlist_id
         - date_set
         - last_updated
+
+    Portfolio:
+      type: object
+      description: Complete portfolio with all details and holdings
+      properties:
+        id:
+          type: string
+          example: "portfolio_123"
+          description: Unique identifier for the portfolio
+        portfolio_name:
+          type: string
+          example: "AI Acceleration Basket"
+          description: Name of the portfolio
+        client_name:
+          type: string
+          example: "John Doe"
+          description: Name or ID of the client
+        client_age:
+          type: integer
+          nullable: true
+          example: 35
+          description: Age of the client
+        risk_profile:
+          type: string
+          nullable: true
+          enum: [Conservative, Moderate, Aggressive, Tactical, Income, Balanced]
+          example: "Moderate"
+          description: Risk profile of the portfolio
+        strategy_type:
+          type: string
+          nullable: true
+          enum: [Growth, Value, Dividend, Thematic, Balanced]
+          example: "Growth"
+          description: Investment strategy type
+        benchmark:
+          type: string
+          nullable: true
+          example: "NIFTY 50"
+          description: Benchmark index
+        objective:
+          type: string
+          nullable: true
+          example: "Capital appreciation through tech disruption"
+          description: Investment objective
+        initial_capital:
+          type: number
+          format: float
+          example: 100000.0
+          description: Total investment amount
+        investment_horizon:
+          type: string
+          nullable: true
+          enum: ["6 Months", "1 Year", "3 Years", "5 Years", "7 Years", "10 Years"]
+          example: "5 Years"
+          description: Investment time horizon
+        expected_rate_of_return:
+          type: number
+          format: float
+          nullable: true
+          minimum: 8.0
+          maximum: 30.0
+          example: 12.5
+          description: Expected annual rate of return (percentage)
+        commentary:
+          type: string
+          nullable: true
+          example: "Supporting commentary and rationale..."
+          description: Additional commentary
+        allocated_amount:
+          type: number
+          format: float
+          example: 40125.0
+          description: Total amount allocated across all holdings
+        allocation_percent:
+          type: number
+          format: float
+          example: 40.125
+          description: Percentage of initial capital allocated
+        estimated_returns:
+          type: number
+          format: float
+          example: 73450.25
+          description: Estimated returns based on expected rate and horizon
+        holdings_count:
+          type: integer
+          example: 1
+          description: Number of holdings in the portfolio
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Holding'
+          description: Array of portfolio holdings
+        status:
+          type: string
+          enum: [active, draft, archived]
+          example: "active"
+          description: Portfolio status
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-15T10:00:00Z"
+          description: Timestamp when portfolio was created
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-15T10:00:00Z"
+          description: Timestamp when portfolio was last updated
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-20T10:00:00Z"
+          description: Timestamp when portfolio was archived
+        archive_reason:
+          type: string
+          nullable: true
+          example: "Portfolio completed"
+          description: Reason for archiving
+      required:
+        - id
+        - portfolio_name
+        - status
+
+    PortfolioInput:
+      type: object
+      description: Input schema for creating or updating a portfolio
+      properties:
+        portfolio_name:
+          type: string
+          example: "AI Acceleration Basket"
+        client_name:
+          type: string
+          example: "John Doe"
+        client_age:
+          type: integer
+          nullable: true
+          example: 35
+        risk_profile:
+          type: string
+          nullable: true
+          enum: [Conservative, Moderate, Aggressive, Tactical, Income, Balanced]
+        strategy_type:
+          type: string
+          nullable: true
+          enum: [Growth, Value, Dividend, Thematic, Balanced]
+        benchmark:
+          type: string
+          nullable: true
+          example: "NIFTY 50"
+        objective:
+          type: string
+          nullable: true
+        initial_capital:
+          type: number
+          format: float
+          example: 100000.0
+        investment_horizon:
+          type: string
+          nullable: true
+          enum: ["6 Months", "1 Year", "3 Years", "5 Years", "7 Years", "10 Years"]
+        expected_rate_of_return:
+          type: number
+          format: float
+          nullable: true
+          minimum: 8.0
+          maximum: 30.0
+        commentary:
+          type: string
+          nullable: true
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/HoldingInput'
+        status:
+          type: string
+          enum: [active, draft, archived]
+          example: "active"
+
+    PortfolioSummary:
+      type: object
+      description: Summary view of portfolio for list/card display
+      properties:
+        id:
+          type: string
+          example: "portfolio_123"
+        portfolio_name:
+          type: string
+          example: "AI Acceleration Basket"
+        client_name:
+          type: string
+          example: "John Doe"
+        initial_capital:
+          type: number
+          format: float
+          example: 100000.0
+        allocated_amount:
+          type: number
+          format: float
+          example: 40125.0
+        allocation_percent:
+          type: number
+          format: float
+          example: 40.125
+        holdings_count:
+          type: integer
+          example: 1
+        estimated_returns:
+          type: number
+          format: float
+          example: 73450.25
+        investment_horizon:
+          type: string
+          nullable: true
+          example: "5 Years"
+        expected_rate_of_return:
+          type: number
+          format: float
+          nullable: true
+          example: 12.5
+        strategy_type:
+          type: string
+          nullable: true
+          example: "Growth"
+        risk_profile:
+          type: string
+          nullable: true
+          example: "Moderate"
+        status:
+          type: string
+          enum: [active, draft, archived]
+          example: "active"
+        last_updated:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-15T10:00:00Z"
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-15T10:00:00Z"
+      required:
+        - id
+        - portfolio_name
+        - status
+
+    Holding:
+      type: object
+      description: A stock holding within a portfolio
+      properties:
+        id:
+          type: string
+          example: "holding_456"
+          description: Unique identifier for the holding
+        ticker:
+          type: string
+          example: "AAPL"
+          description: Stock ticker symbol
+        company:
+          type: string
+          nullable: true
+          example: "Apple Inc"
+          description: Company name
+        exchange:
+          type: string
+          nullable: true
+          example: "NASDAQ"
+          description: Stock exchange
+        sector:
+          type: string
+          nullable: true
+          example: "Technology"
+          description: Industry sector
+        current_price:
+          type: number
+          format: float
+          example: 160.50
+          description: Current stock price
+        target_price:
+          type: number
+          format: float
+          example: 190.00
+          description: Target price for the stock
+        quantity:
+          type: integer
+          example: 250
+          description: Number of shares
+        allocation_percent:
+          type: number
+          format: float
+          example: 40.125
+          description: Percentage of portfolio allocated to this holding
+        allocation_amount:
+          type: number
+          format: float
+          example: 40125.0
+          description: Dollar amount allocated to this holding
+        market_cap:
+          type: number
+          format: float
+          nullable: true
+          example: 2500000000000.0
+          description: Market capitalization
+        pe_ratio:
+          type: number
+          format: float
+          nullable: true
+          example: 28.5
+          description: Price-to-earnings ratio
+        notes:
+          type: string
+          nullable: true
+          example: "Strong fundamentals"
+          description: Additional notes about the holding
+      required:
+        - id
+        - ticker
+        - current_price
+        - target_price
+        - quantity
+
+    HoldingInput:
+      type: object
+      description: Input schema for a holding
+      properties:
+        ticker:
+          type: string
+          example: "AAPL"
+        company:
+          type: string
+          nullable: true
+          example: "Apple Inc"
+        exchange:
+          type: string
+          nullable: true
+          example: "NASDAQ"
+        sector:
+          type: string
+          nullable: true
+          example: "Technology"
+        current_price:
+          type: number
+          format: float
+          example: 160.50
+        target_price:
+          type: number
+          format: float
+          example: 190.00
+        quantity:
+          type: integer
+          example: 250
+        allocation_percent:
+          type: number
+          format: float
+          nullable: true
+          example: 40.0
+        allocation_amount:
+          type: number
+          format: float
+          nullable: true
+          example: 40125.0
+        market_cap:
+          type: number
+          format: float
+          nullable: true
+        pe_ratio:
+          type: number
+          format: float
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required:
+        - ticker
+        - quantity
+        - current_price
+        - target_price
+
+    Pagination:
+      type: object
+      description: Pagination metadata
+      properties:
+        current_page:
+          type: integer
+          example: 1
+          description: Current page number
+        total_pages:
+          type: integer
+          example: 5
+          description: Total number of pages
+        total_items:
+          type: integer
+          example: 98
+          description: Total number of items
+        items_per_page:
+          type: integer
+          example: 20
+          description: Number of items per page
+      required:
+        - current_page
+        - total_pages
+        - total_items
+        - items_per_page
+
+    ValidationError:
+      type: object
+      description: Validation error response format
+      properties:
+        status:
+          type: string
+          enum: [error]
+          example: error
+        message:
+          type: string
+          example: "Validation failed"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            portfolio_name: ["Portfolio name is required"]
+            initial_capital: ["Initial capital must be greater than 0"]
+            holdings: ["At least one holding is required"]
+      required:
+        - status
+        - message
+        - errors
 
     Error:
       type: object
@@ -2421,6 +3655,90 @@ components:
         - createdAt
         - updatedAt
 
+    TradingIdea:
+      type: object
+      description: Analyst trading idea with supporting PDF links
+      properties:
+        id:
+          type: string
+          example: "idea_uuid"
+          description: Unique identifier for the trading idea
+        name:
+          type: string
+          example: "John Doe"
+          description: Analyst name
+        title:
+          type: string
+          example: "Reliance Industries - Strong Buy Opportunity"
+          description: Idea title/headline
+        company:
+          type: string
+          example: "Reliance Industries"
+          description: Company name
+        ticker:
+          type: string
+          nullable: true
+          example: "RELIANCE.NS"
+          description: Stock ticker symbol
+        r_org:
+          type: string
+          nullable: true
+          example: "Alpha Research"
+          description: Research institute/organization providing the insight
+        action:
+          type: string
+          enum: [Buy, Sell, Hold, Reduce, Add]
+          example: "Buy"
+          description: Analyst recommendation
+        target:
+          type: number
+          format: float
+          nullable: true
+          example: 2500.00
+          description: Target price in INR
+        current:
+          type: number
+          format: float
+          nullable: true
+          example: 2300.00
+          description: Current price when the idea was created
+        supporting_reports:
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            - "https://example.com/report-one.pdf"
+            - "https://example.com/report-two.pdf"
+          description: Array of PDF links that support the idea
+        conviction:
+          type: number
+          format: float
+          minimum: 1
+          maximum: 5
+          example: 4.5
+          description: Analyst conviction score (1-5, decimals allowed)
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-01-20T10:30:00.000Z"
+          description: Timestamp when the idea was created
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-01-20T12:45:00.000Z"
+          description: Timestamp when the idea was last updated
+      required:
+        - id
+        - name
+        - title
+        - company
+        - action
+        - supporting_reports
+        - conviction
+
 
   securitySchemes:
     bearerAuth:
@@ -2453,3 +3771,7 @@ tags:
     description: Research notes management for stock tickers
   - name: Screener Strategies
     description: Stock screener filter strategy management
+  - name: Trading Ideas
+    description: Analyst trading ideas with supporting broker reports
+  - name: Portfolios
+    description: Portfolio Builder API for managing investment portfolios, drafts, and archives
